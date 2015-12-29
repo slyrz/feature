@@ -1,4 +1,3 @@
-import pickle
 import collections
 
 
@@ -215,6 +214,7 @@ class Categorical(Feature):
 
     def set(self, token, weight=1.0):
         self.slot[self.values.index(token)] = weight
+
 
 class Hashed(Feature):
     """Hashes arbitrary values into a fixed number of buckets.
