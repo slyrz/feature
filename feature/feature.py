@@ -103,8 +103,8 @@ class Builder(object):
 
     def __getattr__(self, name):
         function, *partial_applied_args = name.split("_")
-        if function != "set":
-            raise AttributeError(function)
+        if function != "set" or not partial_applied_args:
+            return self.__getattribute__(name)
         return self._curry(function, partial_applied_args)
 
 
@@ -134,7 +134,8 @@ class Array(collections.UserList):
             prefix: str, optional prefix added to the new column names
                 to avoid name clashes.
         """
-        assert len(self) == len(other)
+        if len(self) != len(other):
+            raise ValueError("array length does not match - have {} and {}".format(len(self), len(other)))
 
         if prefix:
             self.columns.extend("{}_{}".format(prefix, name) for name in other.columns)
@@ -161,8 +162,8 @@ class Slot(collections.UserDict):
         self.fields = fields
 
     def __setitem__(self, key, value):
-        if self.fields is not None:
-            assert key in self.fields
+        if self.fields and key not in self.fields:
+            raise KeyError("key '{}' is not a member of fields".format(key))
         self.data[key] = float(value)
 
 
