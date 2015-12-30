@@ -157,6 +157,11 @@ class Array(collections.UserList):
         for i, row in enumerate(other):
             self.data[i].extend(row)
 
+    @property
+    def shape(self):
+        """Returns the array shape."""
+        return (len(self.data), len(self.data[0]))
+
 
 class Slot(collections.UserDict):
     """Slot stores the numerical values produced by a Feature class.
