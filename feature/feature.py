@@ -17,7 +17,8 @@ class Builder(object):
             stored under their names.
     """
 
-    def __init__(self, features):
+    def __init__(self, features, transform=None):
+        self._transform = transform
         self._features = features
         self._slots = {}
         self._rows = []
@@ -85,6 +86,8 @@ class Builder(object):
             if isinstance(feature, Builder):
                 part = self._array_from_builder(name, feature)
             result.concatenate(part, prefix=name)
+        if self._transform:
+            result = self._transform(result)
         return result
 
     def _curry(self, func, parts):
