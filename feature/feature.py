@@ -15,6 +15,8 @@ class Builder(object):
     Args:
         features: {str: Feature|Builder}, instances of Feature/Builder classes
             stored under their names.
+        transform: callable, function called to transform arrays before
+            returning them in the array() function.
     """
 
     def __init__(self, features, transform=None):
@@ -255,3 +257,19 @@ class Hashed(Feature):
         if self.additive and index in self.slot:
             weight += self.slot[index]
         self.slot[index] = weight
+
+class ModelTransform(object):
+    """Abstract, callable class to transform arrays in Builder based on models.
+
+    Args:
+        model: object, the model used to transform arrays.
+    """
+
+    def __init__(self, model):
+        self.model = model
+
+    def __call__(self, array):
+        return self.transform(array)
+
+    def transform(self, array):
+        raise NotImplementedError()
