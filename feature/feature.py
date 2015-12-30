@@ -130,22 +130,29 @@ class Array(collections.UserList):
         # TODO: replace this class with pandas DataFrame?
 
     def concatenate(self, other, prefix=""):
-        """Concatenates the columns from the `other` Array to `self`.
+        """Concatenates the columns from the `other` to `self`. `other` can be
+        of any type that supports len, indexing and enumeration. Furthermore
+        column names can be supplied in a `columns` attribute.
 
         Args:
-            other: Array, contains the new columns.
+            other: contains the new columns.
             prefix: str, optional prefix added to the new column names
                 to avoid name clashes.
         """
         if len(self) != len(other):
             raise ValueError("array length does not match - have {} and {}".format(len(self), len(other)))
 
-        if prefix:
-            self.columns.extend("{}_{}".format(prefix, name) for name in other.columns)
-        else:
-            self.columns.extend(other.columns)
 
-        for i, row in enumerate(other.data):
+        if hasattr(other, "columns"):
+            columns = other.columns
+        else:
+            columns = [ str(i) for i, _ in enumerate(other[0]) ]
+
+        if prefix:
+            columns = [ "{}_{}".format(prefix, name) for name in columns ]
+
+        self.columns.extend(columns)
+        for i, row in enumerate(other):
             self.data[i].extend(row)
 
 
