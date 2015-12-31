@@ -24,7 +24,8 @@ class Group(object):
     """
 
     def __init__(self, features, transform=None):
-        self.transform = transform
+        if transform is not None:
+            self.transform = transform
         self.features = features
         self._slots = {}
         self._rows = []
@@ -83,6 +84,9 @@ class Group(object):
     def _array_from_group(self, name, feature):
         return feature.array()
 
+    def transform(self, array):
+        return array
+
     def array(self):
         result = Array(length=len(self._rows))
         for name, feature in sorted(self.features.items()):
@@ -91,8 +95,7 @@ class Group(object):
             if isinstance(feature, Group):
                 part = self._array_from_group(name, feature)
             result.concatenate(part, prefix=name)
-        if self.transform:
-            result = self.transform(result)
+        result = self.transform(result)
         return result
 
     def _curry(self, func, parts):
