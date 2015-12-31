@@ -26,7 +26,7 @@ class CustomDynamic(Feature):
 def test_custom_features():
     """Test if custom features work."""
 
-    builder = Builder({
+    group = Group({
         "a": CustomSized(),
         "b": CustomNamed(),
         "c": CustomDynamic(),
@@ -34,18 +34,18 @@ def test_custom_features():
 
     for _ in range(10):
         for x in range(4):
-            builder.set_a(x)
+            group.set_a(x)
         for x in "abcd":
-            builder.set_b(x)
-            builder.set_c(x)
-        builder.push()
+            group.set_b(x)
+            group.set_c(x)
+        group.push()
 
-    array = builder.array()
+    array = group.array()
     assert array.shape == (10, 12)
 
 
 def test_field_name_errors():
-    builder = Builder({"a": CustomSized(), "b": CustomNamed(), })
+    group = Group({"a": CustomSized(), "b": CustomNamed(), })
 
-    assert_raises(KeyError, builder.set_a, 5)
-    assert_raises(KeyError, builder.set_b, "z")
+    assert_raises(KeyError, group.set_a, 5)
+    assert_raises(KeyError, group.set_b, "z")

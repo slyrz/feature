@@ -8,12 +8,12 @@ def fnv32a(text):
     return h
 
 
-class Builder(object):
-    """Builder produces real-valued feature arrays from one or more
-    Feature/Builder classes.
+class Group(object):
+    """Group produces real-valued feature arrays from one or more
+    Feature/Group classes.
 
     Args:
-        features: {str: Feature|Builder}, instances of Feature/Builder classes
+        features: {str: Feature|Group}, instances of Feature/Group classes
             stored under their names.
         transform: callable, function called to transform arrays before
             returning them in the array() function.
@@ -26,7 +26,7 @@ class Builder(object):
         self._rows = []
 
     def set(self, *args, **kwargs):
-        # If builder contains only a single feature, allow omitting the name.
+        # If group contains only a single feature, allow omitting the name.
         # Otherwise name should be the first argument and the remaining arguments
         # get passed on to the feature's set() function.
         if len(args) == 1:
@@ -36,10 +36,10 @@ class Builder(object):
             args = args[1:]
 
         feature = self.features[name]
-        # If the feature is an instance of Builder, let it take care of storing
+        # If the feature is an instance of Group, let it take care of storing
         # its values.
         # Otherwise create a slot that stores the value in this class.
-        if isinstance(feature, Builder):
+        if isinstance(feature, Group):
             feature.set(*args, **kwargs)
         else:
             if name not in self._slots:
@@ -47,10 +47,10 @@ class Builder(object):
             feature.set(*args, **kwargs)
 
     def push(self):
-        # To keep the number of rows across all nested builders in sync,
+        # To keep the number of rows across all nested groups in sync,
         # we have to inform them that a new row is being added.
         for feature in self.features.values():
-            if isinstance(feature, Builder):
+            if isinstance(feature, Group):
                 feature.push()
         self._rows.append(self._slots)
         self._slots = {}
@@ -77,7 +77,7 @@ class Builder(object):
             result.data.append(values)
         return result
 
-    def _array_from_builder(self, name, feature):
+    def _array_from_group(self, name, feature):
         return feature.array()
 
     def array(self):
@@ -85,8 +85,8 @@ class Builder(object):
         for name, feature in sorted(self.features.items()):
             if isinstance(feature, Feature):
                 part = self._array_from_feature(name, feature)
-            if isinstance(feature, Builder):
-                part = self._array_from_builder(name, feature)
+            if isinstance(feature, Group):
+                part = self._array_from_group(name, feature)
             result.concatenate(part, prefix=name)
         if self.transform:
             result = self.transform(result)
@@ -167,7 +167,7 @@ class Slot(UserDict):
     """Slot stores the numerical values produced by a Feature class.
 
     For each row, a Feature class writes the values of its fields into a
-    Slot. The Builder stores these Slots and uses them to produce Arrays.
+    Slot. The Group stores these Slots and uses them to produce Arrays.
 
     Args:
         fields: [int|str], if given, all keys passed to the Slot's item setter
@@ -264,7 +264,7 @@ class Hashed(Feature):
         self.slot[index] = weight
 
 class ModelTransform(object):
-    """Abstract, callable class to transform arrays in Builder based on models.
+    """Abstract, callable class to transform arrays in Group based on models.
 
     Args:
         model: object, the model used to transform arrays.
