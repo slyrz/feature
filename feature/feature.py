@@ -20,8 +20,8 @@ class Builder(object):
     """
 
     def __init__(self, features, transform=None):
-        self._transform = transform
-        self._features = features
+        self.transform = transform
+        self.features = features
         self._slots = {}
         self._rows = []
 
@@ -30,12 +30,12 @@ class Builder(object):
         # Otherwise name should be the first argument and the remaining arguments
         # get passed on to the feature's set() function.
         if len(args) == 1:
-            name, = self._features.keys()
+            name, = self.features.keys()
         else:
             name = args[0]
             args = args[1:]
 
-        feature = self._features[name]
+        feature = self.features[name]
         # If the feature is an instance of Builder, let it take care of storing
         # its values.
         # Otherwise create a slot that stores the value in this class.
@@ -49,14 +49,14 @@ class Builder(object):
     def push(self):
         # To keep the number of rows across all nested builders in sync,
         # we have to inform them that a new row is being added.
-        for feature in self._features.values():
+        for feature in self.features.values():
             if isinstance(feature, Builder):
                 feature.push()
         self._rows.append(self._slots)
         self._slots = {}
 
     def _get_fields(self, name):
-        feature = self._features[name]
+        feature = self.features[name]
         if feature.fields is not None:
             fields = set(feature.fields)
         else:
@@ -82,14 +82,14 @@ class Builder(object):
 
     def array(self):
         result = Array(length=len(self._rows))
-        for name, feature in sorted(self._features.items()):
+        for name, feature in sorted(self.features.items()):
             if isinstance(feature, Feature):
                 part = self._array_from_feature(name, feature)
             if isinstance(feature, Builder):
                 part = self._array_from_builder(name, feature)
             result.concatenate(part, prefix=name)
-        if self._transform:
-            result = self._transform(result)
+        if self.transform:
+            result = self.transform(result)
         return result
 
     def _curry(self, func, parts):
