@@ -83,8 +83,13 @@ def test_categorical_feature():
     """Test the Categorical feature class."""
 
     group = Group({
+<<<<<<< HEAD
         "a": Categorical(list(range(3))),
         "b": Categorical(list(range(5))),
+=======
+        "a": Categorical([i for i in range(3)]),
+        "b": Categorical([i for i in range(5)]),
+>>>>>>> c0408b7310a0574083f9313a5aac781220317011
     })
 
     for i in range(10):
@@ -116,8 +121,13 @@ def test_hashed_feature():
     })
 
     for i in range(10):
+<<<<<<< HEAD
         group.set_a("abcde" [i % 3])
         group.set_b("abcde" [i % 5])
+=======
+        group.set_a("abcde"[i % 3])
+        group.set_b("abcde"[i % 5])
+>>>>>>> c0408b7310a0574083f9313a5aac781220317011
         group.push()
 
     array = group.array()
