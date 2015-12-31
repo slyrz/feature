@@ -222,7 +222,9 @@ class Feature(object):
 
 
 class Numerical(Feature):
-    pass
+    """Produces a single numerical value."""
+
+    Fields = 1
 
 
 class Categorical(Feature):
