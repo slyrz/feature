@@ -1,3 +1,5 @@
+import random
+import string
 from collections import Counter
 
 from feature import *
@@ -81,8 +83,8 @@ def test_categorical_feature():
     """Test the Categorical feature class."""
 
     group = Group({
-        "a": Categorical([i for i in range(3)]),
-        "b": Categorical([i for i in range(5)]),
+        "a": Categorical(list(range(3))),
+        "b": Categorical(list(range(5))),
     })
 
     for i in range(10):
@@ -114,8 +116,8 @@ def test_hashed_feature():
     })
 
     for i in range(10):
-        group.set_a("abcde"[i % 3])
-        group.set_b("abcde"[i % 5])
+        group.set_a("abcde" [i % 3])
+        group.set_b("abcde" [i % 5])
         group.push()
 
     array = group.array()
@@ -128,3 +130,25 @@ def test_hashed_feature():
                 assert value == float((i % 3) == int(index))
             else:
                 assert value == float((i % 5) == int(index))
+
+
+def test_stress():
+    """Test the Hashed feature class."""
+
+    group = Group({
+        "a": Numerical(),
+        "b": Numerical(),
+        "c": Categorical(list(range(5))),
+        "d": Hashed(size=5, random_sign=True),
+    })
+
+    for i in range(100):
+        group.set_a(random.random())
+        group.set_b(random.random())
+        group.set_c(random.randint(0, 4))
+        for i in range(10):
+            group.set_d("".join(random.sample(string.ascii_lowercase, 10)))
+        group.push()
+
+    array = group.array()
+    assert array.shape == (100, 12)

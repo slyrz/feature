@@ -8,6 +8,10 @@ def fnv32a(text):
     return h
 
 
+def numbered_columns(array):
+    return [ str(i) for i in range(len(array[0])) ]
+
+
 class Group(object):
     """Group produces real-valued feature arrays from one or more
     Feature/Group classes.
@@ -67,8 +71,7 @@ class Group(object):
         return sorted(fields)
 
     def _array_from_feature(self, name, feature):
-        result = Array()
-        result.columns = self._get_fields(name)
+        result = Array(columns=self._get_fields(name))
         for i, row in enumerate(self._rows):
             values = [0.0] * len(result.columns)
             if name in row:
@@ -125,9 +128,9 @@ class Array(UserList):
         columns: [str], the name of each column in data.
     """
 
-    def __init__(self, length=0):
+    def __init__(self, length=0, columns=None):
         super().__init__()
-        self.columns = []
+        self._columns = columns if columns is not None else []
         self.data = [[] for i in range(length)]
         # TODO: replace this class with pandas DataFrame?
 
@@ -144,16 +147,11 @@ class Array(UserList):
         if len(self) != len(other):
             raise ValueError("array length does not match - have {} and {}".format(len(self), len(other)))
 
-
-        if hasattr(other, "columns"):
-            columns = other.columns
-        else:
-            columns = [ str(i) for i, _ in enumerate(other[0]) ]
-
+        columns = other.columns if hasattr(other, "columns") else numbered_columns(other)
         if prefix:
             columns = [ "{}_{}".format(prefix, name) for name in columns ]
 
-        self.columns.extend(columns)
+        self._columns.extend(columns)
         for i, row in enumerate(other):
             self.data[i].extend(row)
 
@@ -161,6 +159,12 @@ class Array(UserList):
     def shape(self):
         """Returns the array shape."""
         return (len(self.data), len(self.data[0]))
+
+    @property
+    def columns(self):
+        if not self._columns:
+            self._columns = numbered_columns(self)
+        return self._columns
 
 
 class Slot(UserDict):
