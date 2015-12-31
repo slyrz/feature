@@ -8,13 +8,10 @@ def fnv32a(text):
     return h
 
 
-<<<<<<< HEAD
 def numbered_columns(array):
     return [ str(i) for i in range(len(array[0])) ]
 
 
-=======
->>>>>>> c0408b7310a0574083f9313a5aac781220317011
 class Group(object):
     """Group produces real-valued feature arrays from one or more
     Feature/Group classes.
