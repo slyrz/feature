@@ -1,4 +1,4 @@
-import collections
+from collections import UserList, UserDict
 
 
 def fnv32a(text):
@@ -113,7 +113,7 @@ class Builder(object):
         return self._curry(function, partial_applied_args)
 
 
-class Array(collections.UserList):
+class Array(UserList):
     """Array stores the real-valued features.
 
     Args:
@@ -163,7 +163,7 @@ class Array(collections.UserList):
         return (len(self.data), len(self.data[0]))
 
 
-class Slot(collections.UserDict):
+class Slot(UserDict):
     """Slot stores the numerical values produced by a Feature class.
 
     For each row, a Feature class writes the values of its fields into a
