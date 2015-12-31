@@ -92,13 +92,13 @@ def test_categorical_feature():
     """Test the Categorical feature class."""
 
     group = Group({
-        "a": Categorical(list(range(3))),
-        "b": Categorical(list(range(5))),
+        "a": Categorical("abc"),
+        "b": Categorical("abcde"),
     })
 
     for i in range(10):
-        group.set_a(i % 3)
-        group.set_b(i % 5)
+        group.set_a("abcde" [i % 3])
+        group.set_b("abcde" [i % 5])
         group.push()
 
     array = group.array()
@@ -225,11 +225,11 @@ def test_custom_features():
             group.set_a(x)
         for x in "abcd":
             group.set_b(x)
-            group.set_c(x)
+        group.set_c("blub")
         group.push()
 
     array = group.array()
-    assert array.shape == (10, 12)
+    assert array.shape == (10, 9)
 
 
 def test_field_name_errors():
@@ -274,18 +274,21 @@ def test_array_concatenate():
     assert array.shape == (10, 6)
     assert len(array.columns) == 6
     assert all(type(column) is str for column in array.columns)
+    for row in array:
+        assert tuple(row) == (1, 2, 3, 4, 5, 6)
 
     # Now this should fail since the columns have the same names.
     other = Array(columns="abc")
     for i in range(10):
-        other.append([1, 2, 3])
+        other.append([7, 8, 9])
     assert_raises(ValueError, array.concatenate, other)
 
     # Adding a prefix should make it work.
     array.concatenate(other, prefix="other")
     assert array.shape == (10, 9)
     assert len(array.columns) == 9
-
+    for row in array:
+        assert tuple(row) == (1, 2, 3, 4, 5, 6, 7, 8, 9)
 
 class MockSklearnModel(object):
     def fit_transform(self, x):
