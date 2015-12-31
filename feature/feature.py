@@ -9,6 +9,8 @@ def fnv32a(text):
 
 
 def numbered_columns(array):
+    if not array:
+        return []
     return [ str(i) for i in range(len(array[0])) ]
 
 
@@ -31,11 +33,13 @@ class Group(object):
         self._rows = []
 
     def set(self, *args, **kwargs):
-        # If group contains only a single feature, allow omitting the name.
+        # If there's only a single feature, allow omitting the feature name.
         # Otherwise name should be the first argument and the remaining arguments
         # get passed on to the feature's set() function.
-        if len(args) == 1:
+        if len(self.features) == 1:
             name, = self.features.keys()
+            if name == args[0]:
+                args = args[1:]
         else:
             name = args[0]
             args = args[1:]
@@ -133,7 +137,7 @@ class Array(UserList):
 
     def __init__(self, length=0, columns=None):
         super().__init__()
-        self._columns = columns if columns is not None else []
+        self._columns = list(columns) if columns is not None else []
         self.data = [[] for i in range(length)]
         # TODO: replace this class with pandas DataFrame?
 
@@ -150,11 +154,17 @@ class Array(UserList):
         if len(self) != len(other):
             raise ValueError("array length does not match - have {} and {}".format(len(self), len(other)))
 
-        columns = other.columns if hasattr(other, "columns") else numbered_columns(other)
+        old_columns = self.columns
+        new_columns = other.columns if hasattr(other, "columns") else numbered_columns(other)
         if prefix:
-            columns = [ "{}_{}".format(prefix, name) for name in columns ]
+            new_columns = [ "{}_{}".format(prefix, name) for name in new_columns ]
 
-        self._columns.extend(columns)
+        # Make sure the column names do not clash.
+        for column in new_columns:
+            if column in old_columns:
+                raise ValueError("a column named '{}' already exists".format(column))
+
+        self._columns = old_columns + new_columns
         for i, row in enumerate(other):
             self.data[i].extend(row)
 
@@ -183,11 +193,14 @@ class Slot(UserDict):
 
     def __init__(self, fields=None):
         super().__init__()
-        self.fields = fields
+        self._fields = fields
+        self._indexes = fields and all(type(field) is int for field in fields)
 
     def __setitem__(self, key, value):
-        if self.fields and key not in self.fields:
-            raise KeyError("key '{}' is not a member of fields".format(key))
+        if self._indexes and type(key) is str and key.isdigit():
+            key = int(key)
+        if self._fields and key not in self._fields:
+            raise KeyError("key '{}' is not a member of fields ({})".format(key, self._fields))
         self.data[key] = float(value)
 
 
@@ -215,16 +228,25 @@ class Feature(object):
         if type(fields) is int:
             fields = list(range(fields))
         self.slot = None
-        self.fields = fields
+        self.fields = list(fields) if fields else None
 
     def set(self, value):
-        self.slot[0] = value
+        raise NotImplementedError()
 
 
 class Numerical(Feature):
     """Produces a single numerical value."""
 
-    Fields = 1
+    def __init__(self, fields=1):
+        super().__init__(fields=fields)
+
+    def set(self, *args):
+        index = 0
+        if len(args) == 1:
+            value, = args
+        else:
+            index, value = args
+        self.slot[index] = value
 
 
 class Categorical(Feature):
