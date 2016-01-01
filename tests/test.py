@@ -1,10 +1,14 @@
-import random
-import string
+from random import random, choice, randint
+from string import printable
 from collections import Counter
 from nose.tools import assert_raises
 from importlib import import_module
 
 from feature import *
+
+
+def randstr(length=12):
+    return "".join([ choice(printable) for _ in range(length) ])
 
 
 def test_setter_extended():
@@ -177,12 +181,12 @@ def test_stress():
     })
 
     for i in range(100):
-        group.set_a(random.random())
-        group.set_b(random.random())
-        group.set_c(random.randint(0, 4))
+        group.set_a(random())
+        group.set_b(random())
+        group.set_c(randint(0, 4))
         for i in range(10):
-            group.set_d("".join(random.sample(string.ascii_lowercase, 10)))
-            group.set_e("".join(random.sample(string.ascii_lowercase, 10)))
+            group.set_d(randstr())
+            group.set_e(randstr())
         group.push()
 
     array = group.array()
@@ -202,8 +206,8 @@ def test_transform():
     group = Group({"a": Numerical(), "b": Numerical()}, transform=transform)
 
     for _ in range(10):
-        group.set_a(random.random())
-        group.set_b(random.random())
+        group.set_a(random())
+        group.set_b(random())
         group.push()
 
     array = group.array()
@@ -334,8 +338,8 @@ def check_model_transform(transform, model):
 
     for i in range(10):
         for j in range(10):
-            group.set_a(j, random.random())
-            group.set_b(j, random.random())
+            group.set_a(j, random())
+            group.set_b(j, random())
         group.push()
 
     array = group.array()
