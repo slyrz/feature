@@ -141,6 +141,30 @@ def test_hashed_feature():
                 assert value == float((i % 5) == int(index))
 
 
+def test_hashed_feature_random_sign():
+    """Test if the default hash function distributes random signs evenly."""
+
+    group = Group({
+        "a": Hashed(size=100, additive=False, random_sign=True),
+    })
+
+    for i in range(100):
+        for j in range(100):
+            group.set(randstr(), weight=123)
+        group.push()
+
+    array = group.array()
+    assert array.shape == (100, 100)
+
+    pos, neg = 0, 0
+    for row in array:
+        for value in row:
+            assert value == 0 or abs(value) == 123
+            pos += int(value > 0)
+            neg += int(value < 0)
+    assert pos and neg and abs(pos - neg) < (pos + neg) * 0.1
+
+
 def test_stress():
     """Test to see if using different classes works."""
 
