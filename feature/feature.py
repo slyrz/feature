@@ -9,7 +9,8 @@ def fnv32a(text):
 
 
 def numbered_columns(array):
-    if not array:
+    # Can't use `not array` because numpy interprets it differently.
+    if len(array) == 0:
         return []
     return [ str(i) for i in range(len(array[0])) ]
 
