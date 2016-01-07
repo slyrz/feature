@@ -318,22 +318,34 @@ def test_array_concatenate():
     for row in array:
         assert tuple(row) == (1, 2, 3, 4, 5, 6, 7, 8, 9)
 
-class MockSklearnModel(object):
-    def fit_transform(self, x):
-        return [[1, 2]] * len(x)
+
+def test_array_concatenate_numpy():
+    try:
+        import numpy
+    except ImportError as e:
+        return
+
+    array = Array(columns="abc")
+    for i in range(10):
+        array.append([1, 2, 3])
+
+    other = numpy.random.rand(len(array), 4)
+    array.concatenate(other, prefix="other")
+    assert array.shape == (10, 7)
+    assert len(array.columns) == 7
+
+    for i, row in enumerate(array):
+        assert all(x == y for x, y in zip(row[-4:], other[i]))
 
 
-class MockKerasModel(object):
-    def predict(self, x):
-        return [[1, 2]] * len(x)
+def test_transform():
+    transform = lambda x: [[1, 2]] * len(x)
 
-
-def check_model_transform(transform, model):
     group = Group({
         "a": Numerical(fields=10),
         "b": Group({
                 "c": Numerical(fields=10),
-            }, transform=transform(model)),
+            }, transform=transform),
     })
 
     for i in range(10):
@@ -346,13 +358,3 @@ def check_model_transform(transform, model):
     assert array.shape == (10, 12)
     for row in array:
         assert tuple(row[-2:]) == (1, 2)
-
-
-def test_sklearn_plugin():
-    from feature.plugin.sklearn import Transform
-    check_model_transform(Transform, MockSklearnModel())
-
-
-def test_keras_plugin():
-    from feature.plugin.keras import Transform
-    check_model_transform(Transform, MockKerasModel())

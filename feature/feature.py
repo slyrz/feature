@@ -294,19 +294,3 @@ class Hashed(Feature):
         if self.additive and index in self.slot:
             weight += self.slot[index]
         self.slot[index] = weight
-
-class ModelTransform(object):
-    """Abstract, callable class to transform arrays in Group based on models.
-
-    Args:
-        model: object, the model used to transform arrays.
-    """
-
-    def __init__(self, model):
-        self.model = model
-
-    def __call__(self, array):
-        return self.transform(array)
-
-    def transform(self, array):
-        raise NotImplementedError()
