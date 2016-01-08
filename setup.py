@@ -5,5 +5,5 @@ setup(name="feature",
       url="https://github.com/slyrz/feature",
       description="Easy feature engineering.",
       long_description=open('README.md').read(),
-      packages=['feature', 'feature.plugin'],
+      packages=['feature'],
       license='MIT')
