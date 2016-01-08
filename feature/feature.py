@@ -276,7 +276,7 @@ class Hashed(Feature):
         size: int, the number of buckets to use.
         replace: str or callable, defines a replacement strategy if a value
             gets assigned to a non-empty bucket. Supported strategies are
-                - 'add', which adds the value to bucket
+                - 'sum', which adds the value to bucket
                 - 'max', which stores the maximum in the bucket
             Additionally, a callable function can be passed to implement
             a custom replacement strategy.
@@ -288,7 +288,7 @@ class Hashed(Feature):
         super().__init__(fields=size)
         self.random_sign = random_sign
         self.replace = None
-        if replace == "add":
+        if replace == "sum":
             self.func = lambda new, old: new + old
         if replace == "max":
             self.func = lambda new, old: max(new, old)
