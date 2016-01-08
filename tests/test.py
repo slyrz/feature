@@ -149,7 +149,7 @@ def test_hashed_feature_random_sign():
     """Test if the default hash function distributes random signs evenly."""
 
     group = Group({
-        "a": Hashed(size=100, additive=False, random_sign=True),
+        "a": Hashed(size=100, random_sign=True),
     })
 
     for i in range(100):
