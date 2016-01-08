@@ -274,15 +274,26 @@ class Hashed(Feature):
             Please note that Python's hash() function is randomized. Using it
             here maps values to different buckets on each program run.
         size: int, the number of buckets to use.
-        additive: bool, if True, adds up weights mapped to the same bucket.
+        replace: str or callable, defines a replacement strategy if a value
+            gets assigned to a non-empty bucket. Supported strategies are
+                - 'add', which adds the value to bucket
+                - 'max', which stores the maximum in the bucket
+            Additionally, a callable function can be passed to implement
+            a custom replacement strategy.
         random_sign: bool, if True, makes the sign of the weights depend on
             the hash values.
     """
 
-    def __init__(self, hash=fnv32a, size=100, additive=True, random_sign=False):
+    def __init__(self, hash=fnv32a, size=100, replace=None, random_sign=False):
         super().__init__(fields=size)
         self.random_sign = random_sign
-        self.additive = additive
+        self.replace = None
+        if replace == "add":
+            self.func = lambda new, old: new + old
+        if replace == "max":
+            self.func = lambda new, old: max(new, old)
+        if callable(replace):
+            self.func = replace
         self.hash = hash
 
     def set(self, token, weight=1.0):
@@ -291,6 +302,6 @@ class Hashed(Feature):
             if key & 0x80000000 != 0:
                 weight = -weight
         index = key % len(self.fields)
-        if self.additive and index in self.slot:
-            weight += self.slot[index]
+        if self.replace is not None and index in self.slot:
+            weight = self.replace(weight, self.slot[index])
         self.slot[index] = weight
