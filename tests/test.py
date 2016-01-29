@@ -103,6 +103,9 @@ def test_categorical_feature():
     for i in range(10):
         group.set_a("abcde" [i % 3])
         group.set_b("abcde" [i % 5])
+        # Ignore unkown elements.
+        group.set_a("x")
+        group.set_b("x")
         group.push()
 
     array = group.array()

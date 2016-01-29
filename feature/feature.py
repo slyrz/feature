@@ -263,7 +263,8 @@ class Categorical(Feature):
         self.values = values
 
     def set(self, token, weight=1.0):
-        self.slot[self.values.index(token)] = weight
+        if token in self.values:
+            self.slot[self.values.index(token)] = weight
 
 
 class Hashed(Feature):
