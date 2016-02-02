@@ -70,9 +70,9 @@ def test_numerical_feature():
 
     group.set_a(100)
     group.set_b(200)
-    group.set_c_0(40)
-    group.set_c_1(50)
-    group.set_c_2(60)
+    group.set_c(0, 40)
+    group.set_c(1, 50)
+    group.set_c(2, 60)
     group.set_d_x(1)
     group.set_d_y(2)
     group.set_d_z(3)
@@ -241,6 +241,17 @@ class CustomDynamic(Feature):
     def set(self, x):
         self.slot[x] = 1.0
 
+class CustomSlotList(Feature):
+    """Custom feature with its own slot."""
+
+    def set(self):
+        self.slot = [1, 2, 3]
+
+class CustomSlotDict(Feature):
+    """Custom feature with its own slot."""
+
+    def set(self):
+        self.slot = {"foo": 1, "bar": 2, "baz": 3}
 
 def test_custom_features():
     """Test if custom features work."""
@@ -249,6 +260,8 @@ def test_custom_features():
         "a": CustomSized(),
         "b": CustomNamed(),
         "c": CustomDynamic(),
+        "d": CustomSlotList(),
+        "e": CustomSlotDict(),
     })
 
     for _ in range(10):
@@ -257,20 +270,25 @@ def test_custom_features():
         for x in "abcd":
             group.set_b(x)
         group.set_c("blub")
+        group.set_d()
+        group.set_e()
         group.push()
 
     array = group.array()
-    assert array.shape == (10, 9)
+    assert array.shape == (10, 15)
 
 
 def test_field_name_errors():
     """Test if using undefined keys in features with predefined size or
     field names causes an exception."""
 
-    group = Group({"a": CustomSized(), "b": CustomNamed(), })
-    assert_raises(KeyError, group.set_a, 5)
-    assert_raises(KeyError, group.set_b, "z")
+    group = Group({"test": CustomSized(),})
+    group.set_test(5)
+    assert_raises(KeyError, group.push)
 
+    group = Group({"test": CustomNamed(),})
+    group.set_test("e")
+    assert_raises(KeyError, group.push)
 
 def test_custom_empty():
     """Test if array can be build from empty features when the field size or

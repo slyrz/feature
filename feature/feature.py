@@ -15,113 +15,12 @@ def numbered_columns(array):
     return [ str(i) for i in range(len(array[0])) ]
 
 
-class Group(object):
-    """Group produces real-valued feature arrays from one or more
-    Feature/Group classes.
-
-    Args:
-        features: {str: Feature|Group}, instances of Feature/Group classes
-            stored under their names.
-        transform: callable, function called to transform arrays before
-            returning them in the array() function.
-    """
-
-    def __init__(self, features, transform=None):
-        if transform is not None:
-            self.transform = transform
-        self.features = features
-        self._slots = {}
-        self._rows = []
-
-    def set(self, *args, **kwargs):
-        # If there's only a single feature, allow omitting the feature name.
-        # Otherwise name should be the first argument and the remaining arguments
-        # get passed on to the feature's set() function.
-        if len(self.features) == 1:
-            name, = self.features.keys()
-            if name == args[0]:
-                args = args[1:]
-        else:
-            name = args[0]
-            args = args[1:]
-
-        feature = self.features[name]
-        # If the feature is an instance of Group, let it take care of storing
-        # its values.
-        # Otherwise create a slot that stores the value in this class.
-        if isinstance(feature, Group):
-            feature.set(*args, **kwargs)
-        else:
-            if name not in self._slots:
-                feature.slot = self._slots[name] = Slot(feature.fields)
-            feature.set(*args, **kwargs)
-
-    def push(self):
-        # To keep the number of rows across all nested groups in sync,
-        # we have to inform them that a new row is being added.
-        for feature in self.features.values():
-            if isinstance(feature, Group):
-                feature.push()
-        self._rows.append(self._slots)
-        self._slots = {}
-
-    def _get_fields(self, name):
-        feature = self.features[name]
-        if feature.fields is not None:
-            fields = set(feature.fields)
-        else:
-            fields = set()
-            for row in self._rows:
-                if name not in row: continue
-                fields |= set(row[name].keys())
-        return sorted(fields)
-
-    def _array_from_feature(self, name, feature):
-        result = Array(columns=self._get_fields(name))
-        for i, row in enumerate(self._rows):
-            values = [0.0] * len(result.columns)
-            if name in row:
-                for field, value in row[name].items():
-                    values[result.columns.index(field)] = value
-            result.data.append(values)
-        return result
-
-    def _array_from_group(self, name, feature):
-        return feature.array()
-
-    def transform(self, array):
-        return array
-
-    def array(self):
-        result = Array(length=len(self._rows))
-        for name, feature in sorted(self.features.items()):
-            if isinstance(feature, Feature):
-                part = self._array_from_feature(name, feature)
-            if isinstance(feature, Group):
-                part = self._array_from_group(name, feature)
-            result.concatenate(part, prefix=name)
-        result = self.transform(result)
-        return result
-
-    def _curry(self, func, parts):
-        """Returns the curried function `func` with partially applied
-        arguments `parts`.
-
-        Mixing Haskell and Python syntax, the returned value is
-        >>> (self.function *parts)
-        """
-
-        def closure(*args, **kwargs):
-            args = list(parts) + list(args)
-            return getattr(self, func)(*args, **kwargs)
-
-        return closure
-
-    def __getattr__(self, name):
-        function, *partial_applied_args = name.split("_")
-        if function != "set" or not partial_applied_args:
-            return self.__getattribute__(name)
-        return self._curry(function, partial_applied_args)
+def iterate_items(obj):
+    """Iterates over the object's key value pairs (key, value), where obj[key] == value."""
+    if hasattr(obj, "items"):
+        return obj.items()
+    # If the object lacks the items() function, assume it's a list with keys [0, len(obj)-1].
+    return enumerate(obj)
 
 
 class Array(UserList):
@@ -152,6 +51,9 @@ class Array(UserList):
             prefix: str, optional prefix added to the new column names
                 to avoid name clashes.
         """
+        if not self.data:
+            self.data = [[] for i in range(len(other))]
+
         if len(self) != len(other):
             raise ValueError("array length does not match - have {} and {}".format(len(self), len(other)))
 
@@ -181,31 +83,80 @@ class Array(UserList):
         return self._columns
 
 
-class Slot(UserDict):
-    """Slot stores the numerical values produced by a Feature class.
+class Store(object):
 
-    For each row, a Feature class writes the values of its fields into a
-    Slot. The Group stores these Slots and uses them to produce Arrays.
+    def push(self):
+        raise NotImplementedError()
+
+    def array(self):
+        raise NotImplementedError()
+
+
+class Group(Store):
+    """Group produces real-valued feature arrays from one or more
+    Feature/Group classes.
 
     Args:
-        fields: [int|str], if given, all keys passed to the Slot's item setter
-            must be members of this list.
+        features: {str: Feature|Group}, instances of Feature/Group classes
+            stored under their names.
+        transform: callable, function called to transform arrays before
+            returning them in the array() function.
     """
 
-    def __init__(self, fields=None):
-        super().__init__()
-        self._fields = fields
-        self._indexes = fields and all(type(field) is int for field in fields)
+    def __init__(self, features, transform=None):
+        if transform is not None:
+            self.transform = transform
+        self.features = features
 
-    def __setitem__(self, key, value):
-        if self._indexes and type(key) is str and key.isdigit():
-            key = int(key)
-        if self._fields and key not in self._fields:
-            raise KeyError("key '{}' is not a member of fields ({})".format(key, self._fields))
-        self.data[key] = float(value)
+    def set(self, *args, **kwargs):
+        # If there's only a single feature, allow omitting the feature name.
+        # Otherwise name should be the first argument and the remaining arguments
+        # get passed on to the feature's set() function.
+        if len(self.features) == 1:
+            name, = self.features.keys()
+            if name == args[0]:
+                args = args[1:]
+        else:
+            name = args[0]
+            args = args[1:]
+        self.features[name].set(*args, **kwargs)
+
+    def push(self):
+        for feature in self.features.values():
+            feature.push()
+
+    def transform(self, array):
+        return array
+
+    def array(self):
+        result = Array()
+        for name, feature in sorted(self.features.items()):
+            result.concatenate(feature.array(), prefix=name)
+        result = self.transform(result)
+        return result
+
+    def _curry(self, func, parts):
+        """Returns the curried function `func` with partially applied
+        arguments `parts`.
+
+        Mixing Haskell and Python syntax, the returned value is
+        >>> (self.function *parts)
+        """
+
+        def closure(*args, **kwargs):
+            args = list(parts) + list(args)
+            return getattr(self, func)(*args, **kwargs)
+
+        return closure
+
+    def __getattr__(self, name):
+        function, *partial_applied_args = name.split("_")
+        if function != "set" or not partial_applied_args:
+            return self.__getattribute__(name)
+        return self._curry(function, partial_applied_args)
 
 
-class Feature(object):
+class Feature(Store):
     """Base class of all features.
 
     A feature produces one or more numerical values. These values
@@ -228,8 +179,30 @@ class Feature(object):
             fields = self.Fields
         if type(fields) is int:
             fields = list(range(fields))
-        self.slot = None
         self.fields = list(fields) if fields else None
+        self.slot = {}
+        self.rows = []
+
+    def push(self):
+        if self.fields:
+            for field, _ in iterate_items(self.slot):
+                if field not in self.fields:
+                    raise KeyError("unknown field '{}'".format(field))
+        self.rows.append(self.slot)
+        self.slot = {}
+
+    def array(self):
+        # If fields wasn't set, we have to determine the fields based on the provided rows.
+        if self.fields is None:
+            self.fields = sorted({ field for row in self.rows for field, value in iterate_items(row) })
+
+        result = Array(columns=self.fields)
+        for i, row in enumerate(self.rows):
+            values = [0.0] * len(self.fields)
+            for field, value in iterate_items(row):
+                values[self.fields.index(field)] = value
+            result.data.append(values)
+        return result
 
     def set(self, value):
         raise NotImplementedError()
