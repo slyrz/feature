@@ -1,5 +1,5 @@
 from collections import UserList, UserDict
-
+from functools import partial
 
 def fnv32a(text):
     h = 0x811c9dc5
@@ -135,25 +135,11 @@ class Group(Store):
         result = self.transform(result)
         return result
 
-    def _curry(self, func, parts):
-        """Returns the curried function `func` with partially applied
-        arguments `parts`.
-
-        Mixing Haskell and Python syntax, the returned value is
-        >>> (self.function *parts)
-        """
-
-        def closure(*args, **kwargs):
-            args = list(parts) + list(args)
-            return getattr(self, func)(*args, **kwargs)
-
-        return closure
-
     def __getattr__(self, name):
         function, *partial_applied_args = name.split("_")
         if function != "set" or not partial_applied_args:
             return self.__getattribute__(name)
-        return self._curry(function, partial_applied_args)
+        return partial(self.set, *partial_applied_args)
 
 
 class Feature(Store):
