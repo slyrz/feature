@@ -97,17 +97,18 @@ class BaseFeature(object):
 
 class Transform(object):
 
-    def __init__(self, *chain):
-        self.chain = chain
+    def __init__(self, feature, *transforms):
+        self.feature = feature
+        self.transforms = transforms
 
     def array(self):
-        result = self.chain[0].array()
-        for transform in self.chain[1:]:
+        result = self.feature.array()
+        for transform in self.transforms:
             result = transform(result)
         return result
 
     def __getattr__(self, name):
-        return getattr(self.chain[0], name)
+        return getattr(self.feature, name)
 
 
 class Group(BaseFeature):
