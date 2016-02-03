@@ -231,13 +231,12 @@ class Categorical(Feature, CurriedSet):
     """
 
     def __init__(self, values):
-        values = sorted(set(values))
-        super().__init__(dimensions=len(values))
+        super().__init__(dimensions=sorted(set(values)))
         self.values = values
 
     def set(self, token, weight=1.0):
-        if token in self.values:
-            self.slot[self.values.index(token)] = weight
+        if token in self.dimensions:
+            self.slot[token] = weight
 
 
 class Hashed(Feature):
