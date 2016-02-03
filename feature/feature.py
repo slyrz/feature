@@ -88,6 +88,20 @@ class BaseFeature(object):
     def array(self):
         raise NotImplementedError()
 
+class CurriedSet(object):
+    """Helper class that allows partially applying arguments to the object's set function
+    by putting them into the function name. This allows more readable function calls:
+
+    >>> obj.set("a", "b", "c", 1.0)
+    >>> obj.set_a_b_c(1.0)
+    """
+
+    def __getattr__(self, name):
+        function, *partial_applied_args = name.split("_")
+        if function != "set" or not partial_applied_args:
+            return self.__getattribute__(name)
+        return partial(self.set, *partial_applied_args)
+
 
 class Pipe(object):
     """Pipe applies one ore more functions to a feature array.
@@ -112,7 +126,7 @@ class Pipe(object):
         return getattr(self.feature, name)
 
 
-class Group(BaseFeature):
+class Group(BaseFeature, CurriedSet):
     """Group produces real-valued feature arrays from one or more
     Feature/Group classes.
 
@@ -122,6 +136,7 @@ class Group(BaseFeature):
     """
 
     def __init__(self, features):
+        super().__init__()
         self.features = features
 
     def set(self, *args, **kwargs):
@@ -146,12 +161,6 @@ class Group(BaseFeature):
         for name, feature in sorted(self.features.items()):
             result.concat(feature.array(), prefix=name)
         return result
-
-    def __getattr__(self, name):
-        function, *partial_applied_args = name.split("_")
-        if function != "set" or not partial_applied_args:
-            return self.__getattribute__(name)
-        return partial(self.set, *partial_applied_args)
 
 
 class Feature(BaseFeature):
@@ -202,7 +211,7 @@ class Feature(BaseFeature):
         return result
 
 
-class Numerical(Feature):
+class Numerical(Feature, CurriedSet):
     """Produces a single numerical value."""
 
     def set(self, *args):
@@ -214,7 +223,7 @@ class Numerical(Feature):
         self.slot[index] = value
 
 
-class Categorical(Feature):
+class Categorical(Feature, CurriedSet):
     """Performs one hot encoding on categorical data.
 
     Args:
