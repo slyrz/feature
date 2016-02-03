@@ -83,7 +83,10 @@ class Array(UserList):
         return self._columns
 
 
-class Store(object):
+class BaseFeature(object):
+
+    def set(self, *args, **kwargs):
+        raise NotImplementedError()
 
     def push(self):
         raise NotImplementedError()
@@ -92,7 +95,8 @@ class Store(object):
         raise NotImplementedError()
 
 
-class Group(Store):
+
+class Group(BaseFeature):
     """Group produces real-valued feature arrays from one or more
     Feature/Group classes.
 
@@ -142,7 +146,7 @@ class Group(Store):
         return partial(self.set, *partial_applied_args)
 
 
-class Feature(Store):
+class Feature(BaseFeature):
     """Base class of all features.
 
     A feature produces one or more numerical values. These values
@@ -189,9 +193,6 @@ class Feature(Store):
                 values[self.fields.index(field)] = value
             result.data.append(values)
         return result
-
-    def set(self, value):
-        raise NotImplementedError()
 
 
 class Numerical(Feature):
