@@ -95,16 +95,23 @@ class BaseFeature(object):
         raise NotImplementedError()
 
 
-class Transform(object):
+class Pipe(object):
+    """Pipe applies one ore more functions to a feature array.
 
-    def __init__(self, feature, *transforms):
+    Args:
+        feature: Feature|Group, of which the array shall be transformed.
+        functions: callable, one ore more functions that take and return an array.
+    """
+
+    def __init__(self, feature, *functions):
         self.feature = feature
-        self.transforms = transforms
+        self.functions = functions
 
     def array(self):
+        """Returns the feature array with all functions of the pipe applied."""
         result = self.feature.array()
-        for transform in self.transforms:
-            result = transform(result)
+        for function in self.functions:
+            result = function(result)
         return result
 
     def __getattr__(self, name):

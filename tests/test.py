@@ -337,7 +337,7 @@ def test_array_concatenate_numpy():
     for i, row in enumerate(array):
         assert all(x == y for x, y in zip(row[-4:], other[i]))
 
-def test_transform_simple():
+def test_pipe_simple():
     """Test if transforming the array works."""
 
     def transform(array):
@@ -349,7 +349,7 @@ def test_transform_simple():
             new.append([x, y, x + y, x * y])
         return new
 
-    group = Transform(Group({"a": Numerical(), "b": Numerical()}), transform)
+    group = Pipe(Group({"a": Numerical(), "b": Numerical()}), transform)
     for _ in range(10):
         group.set_a(1e-6 + random())
         group.set_b(1e-6 + random())
@@ -364,7 +364,7 @@ def test_transform_simple():
         assert row[3] == row[0] * row[1]
 
 
-def test_transform_numpy():
+def test_pipe_numpy():
     try:
         import numpy
         import numpy.testing
@@ -376,7 +376,7 @@ def test_transform_numpy():
 
     group = Group({
         "a": Numerical(fields=10),
-        "b": Transform(Numerical(fields=10), numpy.array, zero_mean, unit_variance),
+        "b": Pipe(Numerical(fields=10), numpy.array, zero_mean, unit_variance),
     })
 
     for i in range(200):
