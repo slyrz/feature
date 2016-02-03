@@ -1,4 +1,5 @@
 from collections import UserList, UserDict
+from contextlib import contextmanager
 from functools import partial
 
 
@@ -79,6 +80,9 @@ class Array(UserList):
 
 
 class BaseFeature(object):
+    def discard(self):
+        raise NotImplementedError()
+
     def set(self, *args, **kwargs):
         raise NotImplementedError()
 
@@ -88,9 +92,21 @@ class BaseFeature(object):
     def array(self):
         raise NotImplementedError()
 
+    @contextmanager
+    def new(self):
+        self.discard()
+        try:
+            yield self
+        except:
+            self.discard()
+            raise
+        else:
+            self.push()
+
+
 class CurriedSet(object):
     """Helper class that allows partially applying arguments to the object's set function
-    by putting them into the function name. This allows more readable function calls:
+    by placing the arguments in the function name. This allows more readable function calls:
 
     >>> obj.set("a", "b", "c", 1.0)
     >>> obj.set_a_b_c(1.0)
@@ -127,11 +143,10 @@ class Pipe(object):
 
 
 class Group(BaseFeature, CurriedSet):
-    """Group produces real-valued feature arrays from one or more
-    Feature/Group classes.
+    """Group combines one or more Feature/Group instances.
 
     Args:
-        features: {str: Feature|Group}, instances of Feature/Group classes
+        features: {str: Feature|Group}, dictionary of Feature/Group instances
             stored under their names.
     """
 
@@ -151,6 +166,10 @@ class Group(BaseFeature, CurriedSet):
             name = args[0]
             args = args[1:]
         self.features[name].set(*args, **kwargs)
+
+    def discard(self):
+        for feature in self.features.values():
+            feature.discard()
 
     def push(self):
         for feature in self.features.values():
@@ -189,6 +208,9 @@ class Feature(BaseFeature):
         self.dimensions = sorted(set(dimensions)) if dimensions else None
         self.slot = {}
         self.rows = []
+
+    def discard(self):
+        self.slot = {}
 
     def push(self):
         if self.dimensions:
