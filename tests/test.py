@@ -45,7 +45,10 @@ def test_setter_extended():
 def test_numerical_feature():
     """Test the Numerical feature class."""
 
-    group = Group({"a": Numerical(), "b": Numerical(), "c": Numerical(fields=3), "d": Numerical(fields="xyz"), })
+    group = Group({"a": Numerical(),
+                   "b": Numerical(),
+                   "c": Numerical(dimensions=3),
+                   "d": Numerical(dimensions="xyz"), })
 
     group.set_a(100)
     group.set_b(200)
@@ -112,7 +115,7 @@ def test_hashed_feature():
     def mock(c):
         return ord(c) - ord('a')
 
-    group = Group({"a": Hashed(size=3, hash=mock), "b": Hashed(size=5, hash=mock), })
+    group = Group({"a": Hashed(buckets=3, hash=mock), "b": Hashed(buckets=5, hash=mock), })
 
     for i in range(10):
         group.set_a("abcde" [i % 3])
@@ -134,7 +137,7 @@ def test_hashed_feature():
 def test_hashed_feature_random_sign():
     """Test if the default hash function distributes random signs evenly."""
 
-    group = Group({"a": Hashed(size=100, random_sign=True), })
+    group = Group({"a": Hashed(buckets=100, random_sign=True), })
 
     for i in range(100):
         for j in range(100):
@@ -160,8 +163,8 @@ def test_stress():
         "a": Numerical(),
         "b": Numerical(),
         "c": Categorical(list(range(5))),
-        "d": Hashed(size=5),
-        "e": Hashed(size=5,
+        "d": Hashed(buckets=5),
+        "e": Hashed(buckets=5,
                     random_sign=True),
     })
 
@@ -181,7 +184,7 @@ def test_stress():
 class CustomSized(Feature):
     """Custom feature with predefined size."""
 
-    Fields = 4
+    Dimensions = 4
 
     def set(self, x):
         self.slot[x] = 1.0
@@ -190,7 +193,7 @@ class CustomSized(Feature):
 class CustomNamed(Feature):
     """Custom feature with predefined field names."""
 
-    Fields = ["a", "b", "c", "d"]
+    Dimensions = ["a", "b", "c", "d"]
 
     def set(self, x):
         self.slot[x] = 1.0
@@ -262,8 +265,8 @@ def test_custom_empty():
     group = Group({
         "a": CustomSized(),
         "b": CustomNamed(),
-        "c": Numerical(fields=4),
-        "d": Hashed(size=4),
+        "c": Numerical(dimensions=4),
+        "d": Hashed(buckets=4),
         "e": Categorical([1, 2, 3, 4]),
     })
 
@@ -274,7 +277,7 @@ def test_custom_empty():
     assert array.shape == (10, 20)
 
 
-def test_array_concatenate():
+def test_array_concat():
     """Test if array concatenation works."""
 
     array = Array(columns="abc")
@@ -283,7 +286,7 @@ def test_array_concatenate():
 
     # Any 2-dimensional array witht the same number of rows should work.
     other = [[4, 5, 6]] * len(array)
-    array.concatenate(other)
+    array.concat(other)
 
     assert array.shape == (10, 6)
     assert len(array.columns) == 6
@@ -295,17 +298,17 @@ def test_array_concatenate():
     other = Array(columns="abc")
     for i in range(10):
         other.append([7, 8, 9])
-    assert_raises(ValueError, array.concatenate, other)
+    assert_raises(ValueError, array.concat, other)
 
     # Adding a prefix should make it work.
-    array.concatenate(other, prefix="other")
+    array.concat(other, prefix="other")
     assert array.shape == (10, 9)
     assert len(array.columns) == 9
     for row in array:
         assert tuple(row) == (1, 2, 3, 4, 5, 6, 7, 8, 9)
 
 
-def test_array_concatenate_numpy():
+def test_array_concat_numpy():
     try:
         import numpy
     except ImportError as e:
@@ -316,7 +319,7 @@ def test_array_concatenate_numpy():
         array.append([1, 2, 3])
 
     other = numpy.random.rand(len(array), 4)
-    array.concatenate(other, prefix="other")
+    array.concat(other, prefix="other")
     assert array.shape == (10, 7)
     assert len(array.columns) == 7
 
@@ -361,8 +364,12 @@ def test_pipe_numpy():
     unit_variance = lambda x: x / x.std(axis=0)
 
     group = Group({
-        "a": Numerical(fields=10),
-        "b": Pipe(Numerical(fields=10), numpy.array, zero_mean, unit_variance),
+        "a": Numerical(dimensions=10),
+        "b": Pipe(
+            Numerical(dimensions=10),
+            numpy.array,
+            zero_mean,
+            unit_variance),
     })
 
     for i in range(200):

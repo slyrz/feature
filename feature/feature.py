@@ -28,23 +28,17 @@ class Array(UserList):
     """Array stores the real-valued features.
 
     Args:
-        length: int, create the given number of rows.
-
-    Attributes:
-        data: [[float]], 2-dimensional array with the numerical
-            values of all features.
-        columns: [str], the name of each column in data.
+        columns: [str], the name of each column.
     """
 
-    def __init__(self, length=0, columns=None):
+    def __init__(self, columns=None):
         super().__init__()
         self._columns = list(columns) if columns is not None else []
-        self.data = [[] for i in range(length)]
-        # TODO: replace this class with pandas DataFrame?
+        self.data = []
 
-    def concatenate(self, other, prefix=""):
-        """Concatenates the columns from the `other` to `self`. `other` can be
-        of any type that supports len, indexing and enumeration. Furthermore
+    def concat(self, other, prefix=""):
+        """Adds the columns from `other` to `self`. `other` can be
+        of any type that supports length, indexing and enumeration. Furthermore
         column names can be supplied in a `columns` attribute.
 
         Args:
@@ -52,23 +46,22 @@ class Array(UserList):
             prefix: str, optional prefix added to the new column names
                 to avoid name clashes.
         """
-        if not self.data:
+        if len(self) == 0:
             self.data = [[] for i in range(len(other))]
 
         if len(self) != len(other):
             raise ValueError("array length does not match - have {} and {}".format(len(self), len(other)))
 
-        old_columns = self.columns
-        new_columns = other.columns if hasattr(other, "columns") else numbered_columns(other)
+        columns = other.columns if hasattr(other, "columns") else numbered_columns(other)
         if prefix:
-            new_columns = ["{}_{}".format(prefix, name) for name in new_columns]
+            columns = ["{}_{}".format(prefix, name) for name in columns]
 
         # Make sure the column names do not clash.
-        for column in new_columns:
-            if column in old_columns:
+        for column in columns:
+            if column in self._columns:
                 raise ValueError("a column named '{}' already exists".format(column))
 
-        self._columns = old_columns + new_columns
+        self._columns += columns
         for i, row in enumerate(other):
             self.data[i].extend(row)
 
@@ -79,6 +72,7 @@ class Array(UserList):
 
     @property
     def columns(self):
+        """Returns the column names."""
         if not self._columns:
             self._columns = numbered_columns(self)
         return self._columns
@@ -150,7 +144,7 @@ class Group(BaseFeature):
     def array(self):
         result = Array()
         for name, feature in sorted(self.features.items()):
-            result.concatenate(feature.array(), prefix=name)
+            result.concat(feature.array(), prefix=name)
         return result
 
     def __getattr__(self, name):
@@ -167,53 +161,49 @@ class Feature(BaseFeature):
     are stored in so-called fields.
 
     Args:
-        fields: int or [int|str] or None, either the number of fields this feature
-            produces or a list of their names/indexes.
-            If fields is an integer, the field names will be indexes
-            from 0 to `fields-1`.
-            If fields is None, the number of fields and their names will be
+        dimensions: int or [str] or None, either the number of dimensions this feature
+            or a list of their names.
+
+            If dimensions is an integer, the dimension names will be indexes from 0 to `dimensions-1`.
+            If dimensions is None, the number of dimensions and their names will be
             determined dynamically.
 
     Attributes:
-        fields: [int|str] or None, the names of the fields produced by this feature.
+        dimensions: [int|str] or None, the names of the fields produced by this feature.
     """
 
-    def __init__(self, fields=None):
-        if hasattr(self, "Fields"):
-            fields = self.Fields
-        if type(fields) is int:
-            fields = list(range(fields))
-        self.fields = list(fields) if fields else None
+    def __init__(self, dimensions=None):
+        if hasattr(self, "Dimensions"):
+            dimensions = self.Dimensions
+        if type(dimensions) is int:
+            dimensions = list(range(dimensions))
+        self.dimensions = sorted(dimensions) if dimensions else None
         self.slot = {}
         self.rows = []
 
     def push(self):
-        if self.fields:
-            for field, _ in iterate_items(self.slot):
-                if field not in self.fields:
-                    raise KeyError("unknown field '{}'".format(field))
+        if self.dimensions:
+            for dimension, value in iterate_items(self.slot):
+                if dimension not in self.dimensions:
+                    raise KeyError("unknown dimension '{}' (have dimensions {})".format(dimension, self.dimensions))
         self.rows.append(self.slot)
         self.slot = {}
 
     def array(self):
-        # If fields wasn't set, we have to determine the fields based on the provided rows.
-        if self.fields is None:
-            self.fields = sorted({field for row in self.rows for field, value in iterate_items(row)})
-
-        result = Array(columns=self.fields)
+        # If dimensions is None, determine the dimensions by looking at the data.
+        if self.dimensions is None:
+            self.dimensions = sorted({dimension for row in self.rows for dimension, value in iterate_items(row)})
+        result = Array(columns=self.dimensions)
         for i, row in enumerate(self.rows):
-            values = [0.0] * len(self.fields)
-            for field, value in iterate_items(row):
-                values[self.fields.index(field)] = value
+            values = [0.0] * len(self.dimensions)
+            for dimension, value in iterate_items(row):
+                values[self.dimensions.index(dimension)] = value
             result.data.append(values)
         return result
 
 
 class Numerical(Feature):
     """Produces a single numerical value."""
-
-    def __init__(self, fields=1):
-        super().__init__(fields=fields)
 
     def set(self, *args):
         index = 0
@@ -233,7 +223,7 @@ class Categorical(Feature):
 
     def __init__(self, values):
         values = sorted(set(values))
-        super().__init__(fields=len(values))
+        super().__init__(dimensions=len(values))
         self.values = values
 
     def set(self, token, weight=1.0):
@@ -248,7 +238,7 @@ class Hashed(Feature):
         hash: callable, the hash function to map features to buckets.
             Please note that Python's hash() function is randomized. Using it
             here maps values to different buckets on each program run.
-        size: int, the number of buckets to use.
+        buckets: int, the number of buckets to use.
         replace: str or callable, defines a replacement strategy if a value
             gets assigned to a non-empty bucket. Supported strategies are
                 - 'sum', which adds the value to bucket
@@ -259,8 +249,9 @@ class Hashed(Feature):
             the hash values.
     """
 
-    def __init__(self, hash=fnv32a, size=100, replace=None, random_sign=False):
-        super().__init__(fields=size)
+    def __init__(self, hash=fnv32a, buckets=100, replace=None, random_sign=False):
+        super().__init__(dimensions=buckets)
+        self.buckets = buckets
         self.random_sign = random_sign
         self.replace = None
         if replace == "sum":
@@ -276,7 +267,7 @@ class Hashed(Feature):
         if self.random_sign:
             if key & 0x80000000 != 0:
                 weight = -weight
-        index = key % len(self.fields)
+        index = key % self.buckets
         if self.replace is not None and index in self.slot:
             weight = self.replace(weight, self.slot[index])
         self.slot[index] = weight
