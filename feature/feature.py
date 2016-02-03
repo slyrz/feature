@@ -1,6 +1,7 @@
 from collections import UserList, UserDict
 from functools import partial
 
+
 def fnv32a(text):
     h = 0x811c9dc5
     for c in text:
@@ -12,7 +13,7 @@ def numbered_columns(array):
     # Can't use `not array` because numpy interprets it differently.
     if len(array) == 0:
         return []
-    return [ str(i) for i in range(len(array[0])) ]
+    return [str(i) for i in range(len(array[0]))]
 
 
 def iterate_items(obj):
@@ -60,7 +61,7 @@ class Array(UserList):
         old_columns = self.columns
         new_columns = other.columns if hasattr(other, "columns") else numbered_columns(other)
         if prefix:
-            new_columns = [ "{}_{}".format(prefix, name) for name in new_columns ]
+            new_columns = ["{}_{}".format(prefix, name) for name in new_columns]
 
         # Make sure the column names do not clash.
         for column in new_columns:
@@ -84,7 +85,6 @@ class Array(UserList):
 
 
 class BaseFeature(object):
-
     def set(self, *args, **kwargs):
         raise NotImplementedError()
 
@@ -198,7 +198,7 @@ class Feature(BaseFeature):
     def array(self):
         # If fields wasn't set, we have to determine the fields based on the provided rows.
         if self.fields is None:
-            self.fields = sorted({ field for row in self.rows for field, value in iterate_items(row) })
+            self.fields = sorted({field for row in self.rows for field, value in iterate_items(row)})
 
         result = Array(columns=self.fields)
         for i, row in enumerate(self.rows):

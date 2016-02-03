@@ -8,19 +8,13 @@ from feature import *
 
 
 def randstr(length=12):
-    return "".join([ choice(printable) for _ in range(length) ])
+    return "".join([choice(printable) for _ in range(length)])
 
 
 def test_setter_extended():
     """Test if setting multiple features works."""
 
-    group = Group({
-        "a": Numerical(),
-        "b": Numerical(),
-        "c": Group({
-            "d": Numerical(),
-        }),
-    })
+    group = Group({"a": Numerical(), "b": Numerical(), "c": Group({"d": Numerical(), }), })
 
     group.set_a(10)
     group.set_b(20)
@@ -51,12 +45,7 @@ def test_setter_extended():
 def test_numerical_feature():
     """Test the Numerical feature class."""
 
-    group = Group({
-        "a": Numerical(),
-        "b": Numerical(),
-        "c": Numerical(fields=3),
-        "d": Numerical(fields="xyz"),
-    })
+    group = Group({"a": Numerical(), "b": Numerical(), "c": Numerical(fields=3), "d": Numerical(fields="xyz"), })
 
     group.set_a(100)
     group.set_b(200)
@@ -95,10 +84,7 @@ def test_numerical_feature():
 def test_categorical_feature():
     """Test the Categorical feature class."""
 
-    group = Group({
-        "a": Categorical("abc"),
-        "b": Categorical("abcde"),
-    })
+    group = Group({"a": Categorical("abc"), "b": Categorical("abcde"), })
 
     for i in range(10):
         group.set_a("abcde" [i % 3])
@@ -126,10 +112,7 @@ def test_hashed_feature():
     def mock(c):
         return ord(c) - ord('a')
 
-    group = Group({
-        "a": Hashed(size=3, hash=mock),
-        "b": Hashed(size=5, hash=mock),
-    })
+    group = Group({"a": Hashed(size=3, hash=mock), "b": Hashed(size=5, hash=mock), })
 
     for i in range(10):
         group.set_a("abcde" [i % 3])
@@ -151,9 +134,7 @@ def test_hashed_feature():
 def test_hashed_feature_random_sign():
     """Test if the default hash function distributes random signs evenly."""
 
-    group = Group({
-        "a": Hashed(size=100, random_sign=True),
-    })
+    group = Group({"a": Hashed(size=100, random_sign=True), })
 
     for i in range(100):
         for j in range(100):
@@ -180,7 +161,8 @@ def test_stress():
         "b": Numerical(),
         "c": Categorical(list(range(5))),
         "d": Hashed(size=5),
-        "e": Hashed(size=5, random_sign=True),
+        "e": Hashed(size=5,
+                    random_sign=True),
     })
 
     for i in range(100):
@@ -220,17 +202,20 @@ class CustomDynamic(Feature):
     def set(self, x):
         self.slot[x] = 1.0
 
+
 class CustomSlotList(Feature):
     """Custom feature with its own slot."""
 
     def set(self):
         self.slot = [1, 2, 3]
 
+
 class CustomSlotDict(Feature):
     """Custom feature with its own slot."""
 
     def set(self):
         self.slot = {"foo": 1, "bar": 2, "baz": 3}
+
 
 def test_custom_features():
     """Test if custom features work."""
@@ -261,13 +246,14 @@ def test_field_name_errors():
     """Test if using undefined keys in features with predefined size or
     field names causes an exception."""
 
-    group = Group({"test": CustomSized(),})
+    group = Group({"test": CustomSized(), })
     group.set_test(5)
     assert_raises(KeyError, group.push)
 
-    group = Group({"test": CustomNamed(),})
+    group = Group({"test": CustomNamed(), })
     group.set_test("e")
     assert_raises(KeyError, group.push)
+
 
 def test_custom_empty():
     """Test if array can be build from empty features when the field size or
@@ -337,13 +323,13 @@ def test_array_concatenate_numpy():
     for i, row in enumerate(array):
         assert all(x == y for x, y in zip(row[-4:], other[i]))
 
+
 def test_pipe_simple():
     """Test if transforming the array works."""
 
     def transform(array):
-        assert array.shape == (10, 2)
-
         """Turns the (n,2) array into a (n,4) array."""
+        assert array.shape == (10, 2)
         new = Array(columns="abcd")
         for x, y in array:
             new.append([x, y, x + y, x * y])
