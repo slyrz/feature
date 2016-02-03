@@ -196,27 +196,6 @@ def test_stress():
     assert array.shape == (100, 17)
 
 
-def test_transform():
-    """Test if transforming the array works."""
-
-    def transform(array):
-        """Turns the (n,2) array into a (n,4) array."""
-        new = Array(columns="abcd")
-        for _ in array:
-            new.append([1, 2, 3, 4])
-        return new
-
-    group = Group({"a": Numerical(), "b": Numerical()}, transform=transform)
-
-    for _ in range(10):
-        group.set_a(random())
-        group.set_b(random())
-        group.push()
-
-    array = group.array()
-    assert array.shape == (10, 4)
-
-
 class CustomSized(Feature):
     """Custom feature with predefined size."""
 
@@ -358,24 +337,62 @@ def test_array_concatenate_numpy():
     for i, row in enumerate(array):
         assert all(x == y for x, y in zip(row[-4:], other[i]))
 
+def test_transform_simple():
+    """Test if transforming the array works."""
 
-def test_transform():
-    transform = lambda x: [[1, 2]] * len(x)
+    def transform(array):
+        assert array.shape == (10, 2)
+
+        """Turns the (n,2) array into a (n,4) array."""
+        new = Array(columns="abcd")
+        for x, y in array:
+            new.append([x, y, x + y, x * y])
+        return new
+
+    group = Transform(Group({"a": Numerical(), "b": Numerical()}), transform)
+    for _ in range(10):
+        group.set_a(1e-6 + random())
+        group.set_b(1e-6 + random())
+        group.push()
+
+    array = group.array()
+    assert array.shape == (10, 4)
+
+    for row in array:
+        assert row[0] > 0.0 and row[1] > 0.0
+        assert row[2] == row[0] + row[1]
+        assert row[3] == row[0] * row[1]
+
+
+def test_transform_numpy():
+    try:
+        import numpy
+        import numpy.testing
+    except ImportError as e:
+        return
+
+    zero_mean = lambda x: x - x.mean(axis=0)
+    unit_variance = lambda x: x / x.std(axis=0)
 
     group = Group({
         "a": Numerical(fields=10),
-        "b": Group({
-                "c": Numerical(fields=10),
-            }, transform=transform),
+        "b": Transform(Numerical(fields=10), numpy.array, zero_mean, unit_variance),
     })
 
-    for i in range(10):
+    for i in range(200):
         for j in range(10):
             group.set_a(j, random())
             group.set_b(j, random())
         group.push()
 
-    array = group.array()
-    assert array.shape == (10, 12)
-    for row in array:
-        assert tuple(row[-2:]) == (1, 2)
+    array = numpy.array(group.array())
+    assert array.shape == (200, 20)
+
+    a_avg, a_std = 0.5, 0.2887
+    b_avg, b_std = 0.0, 1.0
+
+    avg = array.mean(axis=0)
+    numpy.testing.assert_allclose(avg, [a_avg] * 10 + [b_avg] * 10, atol=0.2, rtol=0.0)
+
+    std = array.std(axis=0)
+    numpy.testing.assert_allclose(std, [a_std] * 10 + [b_std] * 10, atol=0.1, rtol=0.0)

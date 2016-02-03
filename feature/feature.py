@@ -95,6 +95,20 @@ class BaseFeature(object):
         raise NotImplementedError()
 
 
+class Transform(object):
+
+    def __init__(self, *chain):
+        self.chain = chain
+
+    def array(self):
+        result = self.chain[0].array()
+        for transform in self.chain[1:]:
+            result = transform(result)
+        return result
+
+    def __getattr__(self, name):
+        return getattr(self.chain[0], name)
+
 
 class Group(BaseFeature):
     """Group produces real-valued feature arrays from one or more
@@ -103,13 +117,9 @@ class Group(BaseFeature):
     Args:
         features: {str: Feature|Group}, instances of Feature/Group classes
             stored under their names.
-        transform: callable, function called to transform arrays before
-            returning them in the array() function.
     """
 
-    def __init__(self, features, transform=None):
-        if transform is not None:
-            self.transform = transform
+    def __init__(self, features):
         self.features = features
 
     def set(self, *args, **kwargs):
@@ -129,14 +139,10 @@ class Group(BaseFeature):
         for feature in self.features.values():
             feature.push()
 
-    def transform(self, array):
-        return array
-
     def array(self):
         result = Array()
         for name, feature in sorted(self.features.items()):
             result.concatenate(feature.array(), prefix=name)
-        result = self.transform(result)
         return result
 
     def __getattr__(self, name):
