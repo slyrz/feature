@@ -87,26 +87,21 @@ def test_numerical_feature():
 def test_categorical_feature():
     """Test the Categorical feature class."""
 
-    group = Group({"a": Categorical("abc"), "b": Categorical("abcde"), })
+    feature = Categorical("abc")
 
-    for i in range(10):
-        group.set_a("abcde" [i % 3])
-        group.set_b("abcde" [i % 5])
-        # Ignore unkown elements.
-        group.set_a("x")
-        group.set_b("x")
-        group.push()
+    for element in "abc":
+        feature.set(element)
+        feature.set("ignore this")
+        feature.push()
 
-    array = group.array()
-    assert array.shape == (10, 8)
+    for element in "abc":
+        getattr(feature, "set_" + element)()
+        feature.push()
 
+    array = feature.array()
+    assert array.shape == (6, 3)
     for i, row in enumerate(array):
-        for column, value in zip(array.columns, row):
-            feature, index = column.split("_")
-            if feature == "a":
-                assert value == float((i % 3) == int(index))
-            else:
-                assert value == float((i % 5) == int(index))
+        assert sum(row) == 1.0 and row[i % 3] == 1.0
 
 
 def test_hashed_feature():

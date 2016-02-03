@@ -186,7 +186,7 @@ class Feature(BaseFeature):
             dimensions = self.Dimensions
         if type(dimensions) is int:
             dimensions = list(range(dimensions))
-        self.dimensions = sorted(dimensions) if dimensions else None
+        self.dimensions = sorted(set(dimensions)) if dimensions else None
         self.slot = {}
         self.rows = []
 
@@ -231,8 +231,7 @@ class Categorical(Feature, CurriedSet):
     """
 
     def __init__(self, values):
-        super().__init__(dimensions=sorted(set(values)))
-        self.values = values
+        super().__init__(dimensions=values)
 
     def set(self, token, weight=1.0):
         if token in self.dimensions:
